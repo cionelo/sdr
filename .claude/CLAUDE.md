@@ -85,7 +85,24 @@ All 6 migrations live on Supabase (shared instance). Applied via Management API.
 | `sdr_race_sds` | 005 | Live — empty, populated by Pass 4 |
 | `sdr_composite` | 005 | Live — empty, populated by Pass 5 |
 
-**B5 is resolved.** Next blockers: B3 (venue fuzzy matching) and B4 (distance string audit) — both need a single SQL query against live data.
+**B5 resolved 2026-04-11.** All other blockers resolved below.
+
+### B4 — Distance strings (resolved 2026-04-11)
+
+Live `events.distance` values: `800m`, `3000m`, `5000m`, `5K`, `8K`, `Mile`, `DMR`
+
+- `800m`, `3000m`, `5000m`, `5K`, `Mile` → all mapped in `field_mapping.py` ✓
+- `8K` → `None` (XC, no 8000m track equivalent — out of v1 scope) ✓
+- `DMR` → `None` (relay — out of scope) ✓
+- No changes needed to field_mapping.py
+
+### B3 — Venue fuzzy matching (resolved 2026-04-11)
+
+Live `events.location` format: `"City, ST"` (e.g. `"Boston, MA"`, `"Fayetteville, AR"`, `"Virginia Beach, VA"`)
+
+- All current locations are sea level — no altitude adjustments trigger on existing data
+- Matching strategy for Pass 2: `location.split(", ")[0]` → case-insensitive match against `sdr_venues.city`
+- No curated alias table needed for v1
 
 ## Field Mapping
 
