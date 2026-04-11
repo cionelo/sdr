@@ -72,6 +72,21 @@ Gender values: "Men" / "Women" (map to "male"/"female" internally)
 Time field: results.time_s (numeric seconds)
 Distance field: events.distance (text, e.g., "5000m")
 
+## SDR Schema (applied 2026-04-11)
+
+All 6 migrations live on Supabase (shared instance). Applied via Management API.
+
+| Table | Migration | Status |
+|-------|-----------|--------|
+| `sdr_venues` | 001 | Live — 22 altitude venues seeded |
+| `sdr_altitude_adjustments` | 001 + 006 | Live — 154 model-interpolated rows + 1 verified |
+| `results.*` (9 cols added) | 003 | Live — venue_id, normalized_time_s, canonical_event, altitude_adjusted, altitude_adjustment_pct, event_converted, event_conversion_factor, normalization_version, normalization_pass_at |
+| `sdr_athlete_profiles` | 004 | Live — empty, populated by Pass 3 |
+| `sdr_race_sds` | 005 | Live — empty, populated by Pass 4 |
+| `sdr_composite` | 005 | Live — empty, populated by Pass 5 |
+
+**B5 is resolved.** Next blockers: B3 (venue fuzzy matching) and B4 (distance string audit) — both need a single SQL query against live data.
+
 ## Field Mapping
 
 PACE → SDR gender: "Men"→"male", "Women"→"female" (`sdr/py/utils/field_mapping.py`)
@@ -79,4 +94,5 @@ Distance variants (Mile, 5K, 3000m SC) → canonical events via `pace_distance_t
 
 ## Recent Checkpoints
 
+- `~/.claude/checkpoints/chkpt-sdr-2026-04-11-1149.md` — repo bootstrap, env setup, GitHub repo created (cionelo/sdr)
 - `~/.claude/checkpoints/checkpoint-2026-04-08-1447.md` — setup/overhead complete (venv, db.py, CLI, field mapping, pytest config, frontend scaffold)
