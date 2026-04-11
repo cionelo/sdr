@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Frontend
+node_modules/
+*.tsbuildinfo
+.vite/
+
+# Supabase
+supabase/.temp/
+
+# Claude / MCP (contains credentials)
+.mcp.json
+
+# Worktrees
+.worktrees/

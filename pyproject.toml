@@ -1,0 +1,39 @@
+[project]
+name = "sdr"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "supabase>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "numpy",
+    "scipy",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["sdr*"]
+
+[tool.pytest.ini_options]
+testpaths = ["py/tests"]
+markers = [
+    "unit: pure logic, no I/O",
+    "integration: requires Supabase connection",
+]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+source = ["sdr/py"]
+omit = ["sdr/py/tests/*", "sdr/py/scripts/*", "sdr/py/conftest.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "raise NotImplementedError",
+    "if __name__",
+    "pragma: no cover",
+]

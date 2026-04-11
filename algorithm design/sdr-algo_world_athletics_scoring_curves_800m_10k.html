@@ -1,0 +1,308 @@
+
+<style>
+.event-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; }
+.event-tab { padding:5px 14px; border:0.5px solid var(--color-border-secondary); border-radius:var(--border-radius-md); font-size:13px; cursor:pointer; background:var(--color-background-primary); color:var(--color-text-secondary); transition:all .15s; }
+.event-tab.active { background:var(--color-background-tertiary); color:var(--color-text-primary); border-color:var(--color-border-primary); font-weight:500; }
+.tier-legend { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1rem; font-size:12px; color:var(--color-text-secondary); }
+.tier-swatch { width:10px; height:10px; border-radius:2px; display:inline-block; margin-right:3px; vertical-align:middle; }
+.stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:1rem; }
+.stat-card { background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:10px 12px; }
+.stat-label { font-size:11px; color:var(--color-text-secondary); margin-bottom:3px; }
+.stat-val { font-size:18px; font-weight:500; color:var(--color-text-primary); }
+.stat-sub { font-size:11px; color:var(--color-text-tertiary); margin-top:1px; }
+</style>
+
+<div class="event-tabs" id="tabs"></div>
+<div class="tier-legend">
+  <span><span class="tier-swatch" style="background:#6366f1"></span>S — Elite (1100+)</span>
+  <span><span class="tier-swatch" style="background:#0ea5e9"></span>A — D1 All-American (950–1100)</span>
+  <span><span class="tier-swatch" style="background:#10b981"></span>B — D1 Competitive (850–950)</span>
+  <span><span class="tier-swatch" style="background:#f59e0b"></span>C — D2 / D1 Fringe (750–850)</span>
+  <span><span class="tier-swatch" style="background:#ef4444"></span>D — Varsity (650–750)</span>
+  <span><span class="tier-swatch" style="background:#94a3b8"></span>E — Developmental (500–650)</span>
+</div>
+
+<div style="position:relative;width:100%;height:340px;">
+  <canvas id="scoreChart"></canvas>
+</div>
+
+<div class="stat-row" id="statRow"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const textCol = isDark ? '#c2c0b6' : '#3d3d3a';
+const gridCol = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+
+const events = {
+  '800m': {
+    a: 0.000113, b: -192, c: 1.88,
+    minT: 95, maxT: 180,
+    ticks: [96,100,104,108,112,116,120,130,140,150,165,180],
+    fmt: t => { const m=Math.floor(t/60); return m+':'+(t%60<10?'0':'')+Math.round(t%60); },
+    examples: [
+      { label: 'WR', t: 100.91, note: 'David Rudisha 2012' },
+      { label: 'OT Std', t: 105.3, note: 'Olympic Trials standard' },
+      { label: 'Nemo PR', t: 107.0, note: '1:47.0 est.' },
+      { label: 'D2 avg', t: 113.5, note: '~1:53.5 D2 average' },
+    ]
+  },
+  '1500m': {
+    a: 0.0000744, b: -210, c: 1.88,
+    minT: 208, maxT: 340,
+    ticks: [210,220,230,240,255,270,285,300,320,340],
+    fmt: t => { const m=Math.floor(t/60); return m+':'+(t%60<10?'0':'')+Math.round(t%60); },
+    examples: [
+      { label: 'WR', t: 206.0, note: 'Hicham El Guerrouj' },
+      { label: 'OT Std', t: 218.0, note: 'Olympic Trials standard' },
+      { label: 'D1 avg', t: 228.0, note: '~3:48 D1 average' },
+      { label: 'D2 avg', t: 245.0, note: '~4:05 D2 average' },
+    ]
+  },
+  'Mile': {
+    a: 0.0000565, b: -240, c: 1.88,
+    minT: 222, maxT: 390,
+    ticks: [225,235,245,255,265,280,300,320,345,375],
+    fmt: t => { const m=Math.floor(t/60); const s=(t%60).toFixed(1); return m+':'+(parseFloat(s)<10?'0':'')+s; },
+    examples: [
+      { label: 'WR', t: 223.13, note: 'Hicham El Guerrouj' },
+      { label: 'Sub-4', t: 240.0, note: 'Historical barrier' },
+      { label: 'D1 avg', t: 250.0, note: '~4:10 D1 average' },
+      { label: 'D2 avg', t: 268.0, note: '~4:28 D2 average' },
+    ]
+  },
+  '5K': {
+    a: 0.0000284, b: -400, c: 1.88,
+    minT: 753, maxT: 1200,
+    ticks: [756,780,800,830,860,900,960,1020,1080,1140,1200],
+    fmt: t => { const m=Math.floor(t/60); return m+':'+(t%60<10?'0':'')+Math.round(t%60); },
+    examples: [
+      { label: 'WR', t: 756.3, note: 'Joshua Cheptegei 2020' },
+      { label: 'OT Std', t: 810.0, note: '~13:30 Olympic Trials' },
+      { label: 'Nemo PR', t: 876.0, note: '14:36' },
+      { label: 'D2 avg', t: 942.0, note: '~15:42 D2 average' },
+    ]
+  },
+  '10K': {
+    a: 0.0000175, b: -800, c: 1.88,
+    minT: 1570, maxT: 2600,
+    ticks: [1577,1620,1680,1740,1800,1860,1980,2100,2220,2400,2600],
+    fmt: t => { const m=Math.floor(t/60); return m+':'+(t%60<10?'0':'')+Math.round(t%60); },
+    examples: [
+      { label: 'WR', t: 1577.5, note: 'Joshua Cheptegei 2020' },
+      { label: 'OT Std', t: 1680.0, note: '~28:00 Olympic Trials' },
+      { label: 'D1 avg', t: 1770.0, note: '~29:30 D1 average' },
+      { label: 'D2 avg', t: 1950.0, note: '~32:30 D2 average' },
+    ]
+  }
+};
+
+const tiers = [
+  { min:1100, max:1400, color:'#6366f1', label:'S' },
+  { min:950,  max:1100, color:'#0ea5e9', label:'A' },
+  { min:850,  max:950,  color:'#10b981', label:'B' },
+  { min:750,  max:850,  color:'#f59e0b', label:'C' },
+  { min:650,  max:750,  color:'#ef4444', label:'D' },
+  { min:500,  max:650,  color:'#94a3b8', label:'E' },
+];
+
+function score(ev, t) {
+  const { a, b, c } = ev;
+  const M = -t;
+  const val = M - b;
+  if (val <= 0) return 0;
+  return Math.round(a * Math.pow(val, c));
+}
+
+function tierOf(pts) {
+  for (const t of tiers) if (pts >= t.min && pts < t.max) return t;
+  return tiers[tiers.length-1];
+}
+
+function timeForScore(ev, target) {
+  let lo = ev.minT, hi = ev.maxT * 2;
+  for (let i=0; i<60; i++) {
+    const mid = (lo+hi)/2;
+    const s = score(ev, mid);
+    if (Math.abs(s - target) < 0.5) return mid;
+    if (s > target) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+let chart;
+const tabsEl = document.getElementById('tabs');
+const statRowEl = document.getElementById('statRow');
+let currentEvent = '800m';
+
+Object.keys(events).forEach(name => {
+  const btn = document.createElement('button');
+  btn.className = 'event-tab' + (name === currentEvent ? ' active' : '');
+  btn.textContent = name;
+  btn.onclick = () => { currentEvent = name; render(); document.querySelectorAll('.event-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); };
+  tabsEl.appendChild(btn);
+});
+
+function render() {
+  const ev = events[currentEvent];
+  const times = [];
+  const scores = [];
+  const step = (ev.maxT - ev.minT) / 200;
+  for (let t = ev.minT; t <= ev.maxT; t += step) {
+    times.push(t);
+    scores.push(score(ev, t));
+  }
+
+  const pointColors = times.map((t,i) => {
+    const pt = scores[i];
+    const tier = tierOf(pt);
+    return tier.color;
+  });
+
+  const annotations = {};
+  ev.examples.forEach((ex, i) => {
+    const pt = score(ev, ex.t);
+    annotations['ex'+i] = {
+      type: 'line',
+      xMin: ex.t, xMax: ex.t,
+      borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+      borderWidth: 1,
+      borderDash: [4,3],
+      label: {
+        display: true,
+        content: ex.label,
+        position: 'start',
+        backgroundColor: 'transparent',
+        color: textCol,
+        font: { size: 11 },
+        yAdjust: i % 2 === 0 ? -8 : 20
+      }
+    };
+  });
+
+  const tierLines = {};
+  tiers.forEach((tier,i) => {
+    tierLines['tier'+i] = {
+      type: 'line',
+      yMin: tier.min, yMax: tier.min,
+      borderColor: tier.color,
+      borderWidth: 0.8,
+      borderDash: [3,4],
+    };
+  });
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('scoreChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        data: times.map((t,i) => ({ x: t, y: scores[i] })),
+        pointRadius: 2.5,
+        pointHoverRadius: 4,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: 'transparent',
+        showLine: true,
+        borderColor: 'transparent',
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => ev.fmt(Math.round(ctx[0].parsed.x)),
+            label: ctx => {
+              const pts = Math.round(ctx.parsed.y);
+              const t = tierOf(pts);
+              return `${pts} pts — Tier ${t.label}`;
+            }
+          },
+          backgroundColor: isDark ? '#2c2c2a' : '#fff',
+          titleColor: textCol,
+          bodyColor: textCol,
+          borderColor: isDark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)',
+          borderWidth: 0.5,
+        },
+        annotation: { annotations: { ...annotations, ...tierLines } }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'Time (seconds)', color: textCol, font: { size: 12 } },
+          ticks: {
+            color: textCol,
+            font: { size: 11 },
+            callback: t => ev.fmt(t),
+            values: ev.ticks,
+            autoSkip: false,
+            maxRotation: 40,
+          },
+          min: ev.minT,
+          max: ev.maxT,
+          grid: { color: gridCol }
+        },
+        y: {
+          title: { display: true, text: 'World Athletics points', color: textCol, font: { size: 12 } },
+          min: 450,
+          max: 1350,
+          ticks: { color: textCol, font: { size: 11 }, stepSize: 100 },
+          grid: { color: gridCol }
+        }
+      }
+    }
+  });
+
+  statRowEl.innerHTML = '';
+  ev.examples.forEach(ex => {
+    const pt = score(ev, ex.t);
+    const tier = tierOf(pt);
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `<div class="stat-label">${ex.label}</div><div class="stat-val">${pt} <span style="font-size:13px;color:${tier.color};font-weight:500">Tier ${tier.label}</span></div><div class="stat-sub">${ev.fmt(ex.t)} — ${ex.note}</div>`;
+    statRowEl.appendChild(card);
+  });
+}
+
+const annotationPlugin = {
+  id: 'annotation',
+  afterDraw(chart) {
+    const ctx = chart.ctx;
+    const { top, bottom, left, right } = chart.chartArea;
+    const anns = chart.config.options.plugins.annotation?.annotations || {};
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    Object.values(anns).forEach(ann => {
+      if (ann.type !== 'line') return;
+      ctx.save();
+      ctx.strokeStyle = ann.borderColor;
+      ctx.lineWidth = ann.borderWidth;
+      if (ann.borderDash) ctx.setLineDash(ann.borderDash);
+      ctx.beginPath();
+      if (ann.xMin !== undefined) {
+        const x = xScale.getPixelForValue(ann.xMin);
+        ctx.moveTo(x, top); ctx.lineTo(x, bottom);
+      } else if (ann.yMin !== undefined) {
+        const y = yScale.getPixelForValue(ann.yMin);
+        ctx.moveTo(left, y); ctx.lineTo(right, y);
+      }
+      ctx.stroke();
+      if (ann.label?.display && ann.xMin !== undefined) {
+        const x = xScale.getPixelForValue(ann.xMin);
+        ctx.setLineDash([]);
+        ctx.fillStyle = ann.label.color;
+        ctx.font = `${ann.label.font?.size || 11}px sans-serif`;
+        ctx.textAlign = 'center';
+        const yPos = top + (ann.label.yAdjust > 0 ? 28 : 12);
+        ctx.fillText(ann.label.content, x+1, yPos);
+      }
+      ctx.restore();
+    });
+  }
+};
+Chart.register(annotationPlugin);
+
+render();
+</script>
