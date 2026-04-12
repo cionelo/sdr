@@ -86,8 +86,8 @@ All 8 migrations live on Supabase (shared instance). Applied via Management API.
 | `sdr_composite` | 005 | Live — empty, populated by Pass 5 |
 | `meets` | 007 + 008 | Live — 419 meets, all 493 events linked via meet_id |
 
-`meets` columns: id, name, date, location, venue_id, division, season, indoor, timing_company, a_live_url_1, a_live_url_1_scrapable, live_url_2, live_url_2_scrapable, tfrrs_url, source_url, scraped_at, created_at, updated_at
-`events.meet_id` FK added (migration 007).
+`meets` columns: id, name, date, location, venue_id, division, season, indoor, timing_company, a_live_url_1, a_live_url_1_scrapable, live_url_2, live_url_2_scrapable, tfrrs_url, tfrrs_id, source_url, source_url_has_splits, source_url_known_provider, scraped_at, created_at, updated_at
+`events` columns: id, source_id, name, date, location, gender, distance, season, division, provider, conference_id, meet_id, source_url, created_at
 
 **B5 resolved 2026-04-11.** All other blockers resolved below.
 
