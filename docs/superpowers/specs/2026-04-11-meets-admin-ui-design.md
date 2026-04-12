@@ -165,7 +165,7 @@ Filter state in `useMeets` is persisted to URL search params (`useSearchParams`)
 | location | text | |
 | venue | VenueTypeahead | city search → sdr_venues; shows is_altitude below if venue linked |
 | division | text | |
-| season | select | indoor / outdoor / xc |
+| season | select | indoor / outdoor / xc — drives `indoor` boolean column (not shown separately) |
 | timing_company | text | |
 | is_altitude | read-only display | derived from venue; shows `—` if no venue |
 | **URLs (collapsible section)** | | |
@@ -265,6 +265,17 @@ Coverage threshold: 80% (enforced in vite.config.ts)
 Service tests: inject mock Supabase client.
 Hook tests: `renderHook` with mocked service module.
 Component tests: mock hooks at module level.
+
+---
+
+## Scraper / DB Field Sync Principle
+
+The `meets` table schema and the scraper output must stay in 1:1 alignment. If a field is added or removed from either side, the other must be updated in the same change:
+
+- **New DB column** → add corresponding scraper output field before deploying
+- **Scraper drops a field** → remove or null-default the DB column in the same migration
+
+This is a hard operational rule — the system must not rely on Claude or manual intervention to bridge a field mismatch between the scraper and the schema at runtime.
 
 ---
 
