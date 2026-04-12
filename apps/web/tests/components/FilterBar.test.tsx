@@ -51,4 +51,49 @@ describe('FilterBar', () => {
     expect(screen.getByLabelText(/from/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/to/i)).toBeInTheDocument()
   })
+
+  it('calls onFiltersChange when dateFrom changes', () => {
+    const onChange = vi.fn()
+    render(<FilterBar filters={{}} onFiltersChange={onChange} />)
+    fireEvent.change(screen.getByLabelText(/from/i), { target: { value: '2026-01-01' } })
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ dateFrom: '2026-01-01' }))
+  })
+
+  it('calls onFiltersChange when dateTo changes', () => {
+    const onChange = vi.fn()
+    render(<FilterBar filters={{}} onFiltersChange={onChange} />)
+    fireEvent.change(screen.getByLabelText(/to/i), { target: { value: '2026-12-31' } })
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ dateTo: '2026-12-31' }))
+  })
+
+  it('clears dateFrom when empty string is entered', () => {
+    const onChange = vi.fn()
+    render(<FilterBar filters={{ dateFrom: '2026-01-01' }} onFiltersChange={onChange} />)
+    fireEvent.change(screen.getByLabelText(/from/i), { target: { value: '' } })
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ dateFrom: undefined }))
+  })
+
+  it('renders Altitude BoolPillGroup and toggles Yes', () => {
+    const onChange = vi.fn()
+    render(<FilterBar filters={{}} onFiltersChange={onChange} />)
+    const yesBtns = screen.getAllByText('Yes')
+    fireEvent.click(yesBtns[0])
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ isAltitude: true }))
+  })
+
+  it('renders Altitude BoolPillGroup and toggles No', () => {
+    const onChange = vi.fn()
+    render(<FilterBar filters={{}} onFiltersChange={onChange} />)
+    const noBtns = screen.getAllByText('No')
+    fireEvent.click(noBtns[0])
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ isAltitude: false }))
+  })
+
+  it('clicking active bool pill clears it', () => {
+    const onChange = vi.fn()
+    render(<FilterBar filters={{ isAltitude: true }} onFiltersChange={onChange} />)
+    const yesBtns = screen.getAllByText('Yes')
+    fireEvent.click(yesBtns[0])
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ isAltitude: undefined }))
+  })
 })

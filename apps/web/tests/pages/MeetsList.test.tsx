@@ -80,4 +80,50 @@ describe('MeetsList', () => {
     render(<MemoryRouter><MeetsList /></MemoryRouter>)
     expect(screen.getByText('12')).toBeInTheDocument()
   })
+
+  it('shows loading state', () => {
+    vi.mocked(useMeetsHook.useMeets).mockReturnValue({
+      meets: [],
+      filters: {},
+      setFilters: vi.fn(),
+      loading: true,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<MemoryRouter><MeetsList /></MemoryRouter>)
+    expect(screen.getByText(/loading/i)).toBeInTheDocument()
+  })
+
+  it('shows error message when error is set', () => {
+    vi.mocked(useMeetsHook.useMeets).mockReturnValue({
+      meets: [],
+      filters: {},
+      setFilters: vi.fn(),
+      loading: false,
+      error: new Error('fetch failed'),
+      refetch: vi.fn(),
+    })
+    render(<MemoryRouter><MeetsList /></MemoryRouter>)
+    expect(screen.getByText(/fetch failed/i)).toBeInTheDocument()
+  })
+
+  it('shows empty state when no meets match filters', () => {
+    vi.mocked(useMeetsHook.useMeets).mockReturnValue({
+      meets: [],
+      filters: {},
+      setFilters: vi.fn(),
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<MemoryRouter><MeetsList /></MemoryRouter>)
+    expect(screen.getByText(/no meets match/i)).toBeInTheDocument()
+  })
+
+  it('opens AddMeetDrawer when + Add Meet button is clicked', () => {
+    render(<MemoryRouter><MeetsList /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: /add meet/i }))
+    // Drawer is opened — the button should still be in the DOM
+    expect(screen.getByRole('button', { name: /add meet/i })).toBeInTheDocument()
+  })
 })

@@ -60,4 +60,60 @@ describe('MeetForm', () => {
     render(<MeetForm values={emptyValues} onChange={vi.fn()} />)
     expect(screen.getByText(/urls/i)).toBeInTheDocument()
   })
+
+  it('opens URL section on toggle button click', () => {
+    render(<MeetForm values={emptyValues} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    expect(screen.getByLabelText(/live url 1 \(athletics/i)).toBeInTheDocument()
+  })
+
+  it('calls onChange with a_live_url_1 when URL 1 field changes', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    fireEvent.change(screen.getByLabelText(/live url 1 \(athletics/i), { target: { value: 'https://example.com' } })
+    expect(onChange).toHaveBeenCalledWith({ a_live_url_1: 'https://example.com' })
+  })
+
+  it('calls onChange with a_live_url_1_scrapable when checkbox toggled', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[0])
+    expect(onChange).toHaveBeenCalledWith({ a_live_url_1_scrapable: true })
+  })
+
+  it('calls onChange with live_url_2_scrapable when second checkbox toggled', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[1])
+    expect(onChange).toHaveBeenCalledWith({ live_url_2_scrapable: true })
+  })
+
+  it('closes URL section on second toggle button click', () => {
+    render(<MeetForm values={emptyValues} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    expect(screen.getByLabelText(/live url 1 \(athletics/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText(/urls/i))
+    expect(screen.queryByLabelText(/live url 1 \(athletics/i)).not.toBeInTheDocument()
+  })
+
+  it('calls onChange when scraped_at input changes', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    const input = screen.getByLabelText(/scraped/i)
+    fireEvent.change(input, { target: { value: '2026-04-11T12:00' } })
+    expect(onChange).toHaveBeenCalledWith({ scraped_at: '2026-04-11T12:00' })
+  })
+
+  it('clears scraped_at when input cleared', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={{ ...emptyValues, scraped_at: '2026-03-01T12:00' }} onChange={onChange} />)
+    const input = screen.getByLabelText(/scraped/i)
+    fireEvent.change(input, { target: { value: '' } })
+    expect(onChange).toHaveBeenCalledWith({ scraped_at: null })
+  })
 })

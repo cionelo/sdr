@@ -32,4 +32,13 @@ describe('useVenues', () => {
     const { result } = renderHook(() => useVenues('bo'))
     expect(result.current.loading).toBe(true)
   })
+
+  it('returns empty array on fetch error', async () => {
+    vi.mocked(service.fetchVenues).mockRejectedValue(new Error('network error'))
+
+    const { result } = renderHook(() => useVenues('bos'))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.venues).toEqual([])
+  })
 })

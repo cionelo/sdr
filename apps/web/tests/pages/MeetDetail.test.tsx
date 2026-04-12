@@ -78,4 +78,61 @@ describe('MeetDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
     await waitFor(() => expect(service.updateMeet).toHaveBeenCalledWith(expect.anything(), 'abc', { name: 'Changed' }))
   })
+
+  it('shows loading state', () => {
+    vi.mocked(useMeetHook.useMeet).mockReturnValue({
+      meet: null, events: [], patch: {}, setPatch: vi.fn(),
+      isDirty: false, loading: true, error: null, refetch: vi.fn(),
+    })
+    renderDetail()
+    expect(screen.getByText(/loading/i)).toBeInTheDocument()
+  })
+
+  it('shows error state when error is set', () => {
+    vi.mocked(useMeetHook.useMeet).mockReturnValue({
+      meet: null, events: [], patch: {}, setPatch: vi.fn(),
+      isDirty: false, loading: false, error: new Error('not found'), refetch: vi.fn(),
+    })
+    renderDetail()
+    expect(screen.getByText(/not found/i)).toBeInTheDocument()
+  })
+
+  it('shows "Meet not found" when no meet and no error', () => {
+    vi.mocked(useMeetHook.useMeet).mockReturnValue({
+      meet: null, events: [], patch: {}, setPatch: vi.fn(),
+      isDirty: false, loading: false, error: null, refetch: vi.fn(),
+    })
+    renderDetail()
+    expect(screen.getByText(/meet not found/i)).toBeInTheDocument()
+  })
+
+  it('shows save error when updateMeet throws', async () => {
+    vi.mocked(service.updateMeet).mockRejectedValue(new Error('save failed'))
+    vi.mocked(useMeetHook.useMeet).mockReturnValue({
+      meet, events, patch: { name: 'Changed' }, setPatch: vi.fn(),
+      isDirty: true, loading: false, error: null, refetch: vi.fn(),
+    })
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    await waitFor(() => expect(screen.getByText(/save failed/i)).toBeInTheDocument())
+  })
+
+  it('shows empty events state when no events', () => {
+    vi.mocked(useMeetHook.useMeet).mockReturnValue({
+      meet, events: [], patch: {}, setPatch: vi.fn(),
+      isDirty: false, loading: false, error: null, refetch: vi.fn(),
+    })
+    renderDetail()
+    expect(screen.getByText(/no events linked/i)).toBeInTheDocument()
+  })
+
+  it('shows altitude venue info when venue is_altitude', () => {
+    const meetWithVenue = { ...meet, venue: { id: 'v1', city: 'Albuquerque', is_altitude: true } }
+    vi.mocked(useMeetHook.useMeet).mockReturnValue({
+      meet: meetWithVenue as any, events, patch: {}, setPatch: vi.fn(),
+      isDirty: false, loading: false, error: null, refetch: vi.fn(),
+    })
+    renderDetail()
+    expect(screen.getByText(/yes/i)).toBeInTheDocument()
+  })
 })

@@ -45,4 +45,30 @@ describe('useMeets', () => {
 
     expect(result.current.error?.message).toBe('network error')
   })
+
+  it('setFilters updates search params', async () => {
+    vi.mocked(service.fetchMeets).mockResolvedValue(meets as any)
+
+    const { result } = renderHook(() => useMeets(), { wrapper })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    act(() => result.current.setFilters({ season: 'indoor' }))
+    // After setting filters, another fetch should be triggered
+    await waitFor(() => expect(service.fetchMeets).toHaveBeenCalledTimes(2))
+  })
+
+  it('setFilters with existing key removes it from params', async () => {
+    vi.mocked(service.fetchMeets).mockResolvedValue(meets as any)
+
+    // Start with season=indoor in params
+    const wrapperWithParams = ({ children }: { children: React.ReactNode }) =>
+      createElement(MemoryRouter, { initialEntries: ['/meets?season=indoor'] }, children)
+
+    const { result } = renderHook(() => useMeets(), { wrapper: wrapperWithParams })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    // Clear the season filter
+    act(() => result.current.setFilters({ season: undefined }))
+    await waitFor(() => expect(service.fetchMeets).toHaveBeenCalledTimes(2))
+  })
 })
