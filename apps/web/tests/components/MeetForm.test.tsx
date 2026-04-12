@@ -11,7 +11,9 @@ const emptyValues: MeetPayload = {
   division: null, season: null, indoor: null, timing_company: null,
   a_live_url_1: null, a_live_url_1_scrapable: null,
   live_url_2: null, live_url_2_scrapable: null,
-  tfrrs_url: null, source_url: null, scraped_at: null,
+  tfrrs_url: null, tfrrs_id: null,
+  source_url: null, source_url_has_splits: null, source_url_known_provider: null,
+  scraped_at: null,
 }
 
 describe('MeetForm', () => {
@@ -115,5 +117,37 @@ describe('MeetForm', () => {
     const input = screen.getByLabelText(/scraped/i)
     fireEvent.change(input, { target: { value: '' } })
     expect(onChange).toHaveBeenCalledWith({ scraped_at: null })
+  })
+
+  it('renders tfrrs_id field in URLs section', () => {
+    render(<MeetForm values={emptyValues} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    expect(screen.getByLabelText(/tfrrs id/i)).toBeInTheDocument()
+  })
+
+  it('calls onChange with tfrrs_id when field changes', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    fireEvent.change(screen.getByLabelText(/tfrrs id/i), { target: { value: '12345' } })
+    expect(onChange).toHaveBeenCalledWith({ tfrrs_id: '12345' })
+  })
+
+  it('calls onChange with source_url_has_splits when checkbox toggled', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[2])
+    expect(onChange).toHaveBeenCalledWith({ source_url_has_splits: true })
+  })
+
+  it('calls onChange with source_url_known_provider when checkbox toggled', () => {
+    const onChange = vi.fn()
+    render(<MeetForm values={emptyValues} onChange={onChange} />)
+    fireEvent.click(screen.getByText(/urls/i))
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[3])
+    expect(onChange).toHaveBeenCalledWith({ source_url_known_provider: true })
   })
 })

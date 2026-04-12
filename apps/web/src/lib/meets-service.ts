@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Meet, MeetFilters, MeetPayload, MeetEvent, Venue } from './types'
+import type { Meet, MeetFilters, MeetPayload, MeetEvent, Venue, Result, Split } from './types'
 
 export async function fetchVenues(client: SupabaseClient, query: string): Promise<Venue[]> {
   const { data, error } = await client
@@ -80,6 +80,34 @@ export async function fetchMeets(
   }
 
   return meets
+}
+
+export async function fetchEventResults(
+  client: SupabaseClient,
+  eventId: string,
+): Promise<Result[]> {
+  const { data, error } = await client
+    .from('results')
+    .select('id, athlete_id, event_id, time_s, normalized_time_s, canonical_event, altitude_adjusted, altitude_adjustment_pct, athlete:athletes(id, name, team_id, team:teams(id, name))')
+    .eq('event_id', eventId)
+    .order('time_s', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return (data || []) as unknown as Result[]
+}
+
+export async function fetchResultSplits(
+  client: SupabaseClient,
+  resultId: string,
+): Promise<Split[]> {
+  const { data, error } = await client
+    .from('splits')
+    .select('id, result_id, distance_m, time_s, split_s, label')
+    .eq('result_id', resultId)
+    .order('distance_m', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return (data || []) as Split[]
 }
 
 export async function createMeet(client: SupabaseClient, payload: MeetPayload): Promise<Meet> {

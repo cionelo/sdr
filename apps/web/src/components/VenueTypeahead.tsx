@@ -7,7 +7,7 @@ interface Props {
   onChange: (venueId: string | null) => void
 }
 
-export function VenueTypeahead({ value, currentCity, onChange }: Props) {
+export function VenueTypeahead({ value: _value, currentCity, onChange }: Props) {
   const [query, setQuery] = useState(currentCity || '')
   const [open, setOpen] = useState(false)
   const { venues } = useVenues(open ? query : '')

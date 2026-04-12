@@ -11,6 +11,7 @@ export function MeetDetail() {
   const { meet, events, patch, setPatch, isDirty, loading, error, refetch } = useMeet(id!)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     if (!isDirty) return
@@ -71,15 +72,24 @@ export function MeetDetail() {
             <span style={{ fontFamily: 'Teko', fontWeight: 600, fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {meet.name ?? '—'}
             </span>
-            {isDirty && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button
-                className="btn-primary"
-                onClick={handleSave}
-                disabled={saving}
+                aria-label="Edit"
+                onClick={() => setEditOpen((v) => !v)}
+                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', fontFamily: 'Teko', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', color: editOpen ? 'var(--accent)' : 'var(--text-muted)' }}
               >
-                {saving ? 'Saving...' : 'Save'}
+                ✎ Edit
               </button>
-            )}
+              {editOpen && isDirty && (
+                <button
+                  className="btn-primary"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              )}
+            </div>
           </div>
 
           <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-thin)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -93,14 +103,17 @@ export function MeetDetail() {
               : <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, color: 'var(--text-muted)' }}>—</span>}
           </div>
 
-          <MeetForm
-            values={formValues}
-            onChange={setPatch}
-            venueCity={meet.venue?.city}
-          />
-
-          {saveError && (
-            <div style={{ padding: '8px 12px', color: '#DC2626', fontSize: 13 }}>{saveError}</div>
+          {editOpen && (
+            <>
+              <MeetForm
+                values={formValues}
+                onChange={setPatch}
+                venueCity={meet.venue?.city}
+              />
+              {saveError && (
+                <div style={{ padding: '8px 12px', color: '#DC2626', fontSize: 13 }}>{saveError}</div>
+              )}
+            </>
           )}
         </div>
 
@@ -121,7 +134,7 @@ export function MeetDetail() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-card-inner)' }}>
-                  {['Distance', 'Gender', 'Results'].map((h) => (
+                  {['Distance', 'Gender', 'Division', 'Provider', 'Results'].map((h) => (
                     <th key={h} style={{ padding: '6px 12px', textAlign: 'left', fontFamily: 'Teko', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 500 }}>
                       {h}
                     </th>
@@ -131,8 +144,17 @@ export function MeetDetail() {
               <tbody>
                 {events.map((ev) => (
                   <tr key={ev.id} style={{ borderBottom: '1px solid var(--border-thin)' }}>
-                    <td style={{ padding: '8px 12px', fontFamily: 'JetBrains Mono', fontSize: 13 }}>{ev.distance ?? '—'}</td>
+                    <td style={{ padding: '8px 12px', fontFamily: 'JetBrains Mono', fontSize: 13 }}>
+                      <Link
+                        to={`/meets/${id}/events/${ev.id}`}
+                        style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                      >
+                        {ev.distance ?? '—'}
+                      </Link>
+                    </td>
                     <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{ev.gender ?? '—'}</td>
+                    <td style={{ padding: '8px 12px', fontFamily: 'JetBrains Mono', fontSize: 13, color: 'var(--text-muted)' }}>{ev.division ?? '—'}</td>
+                    <td style={{ padding: '8px 12px', fontFamily: 'JetBrains Mono', fontSize: 13, color: 'var(--text-muted)' }}>{ev.provider ?? '—'}</td>
                     <td style={{ padding: '8px 12px', fontFamily: 'JetBrains Mono', fontSize: 13 }}>
                       {ev.results?.[0]?.count ?? 0}
                     </td>

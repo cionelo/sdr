@@ -120,8 +120,27 @@ export function MeetForm({ values, onChange, venueCity }: Props) {
             <Field label="TFRRS URL" id="tfrrs_url">
               <input id="tfrrs_url" type="url" className="field-input" value={values.tfrrs_url || ''} onChange={set('tfrrs_url')} />
             </Field>
+            <Field label="TFRRS ID" id="tfrrs_id">
+              <input id="tfrrs_id" className="field-input" value={values.tfrrs_id || ''} onChange={set('tfrrs_id')} />
+            </Field>
             <Field label="Source URL (scraper-managed)" id="source_url">
               <input id="source_url" type="url" className="field-input" value={values.source_url || ''} onChange={set('source_url')} />
+            </Field>
+            <Field label="Source URL Has Splits" id="source_url_has_splits">
+              <input
+                id="source_url_has_splits"
+                type="checkbox"
+                checked={!!values.source_url_has_splits}
+                onChange={(e) => onChange({ source_url_has_splits: e.target.checked })}
+              />
+            </Field>
+            <Field label="Source URL Known Provider" id="source_url_known_provider">
+              <input
+                id="source_url_known_provider"
+                type="checkbox"
+                checked={!!values.source_url_known_provider}
+                onChange={(e) => onChange({ source_url_known_provider: e.target.checked })}
+              />
             </Field>
           </div>
         )}

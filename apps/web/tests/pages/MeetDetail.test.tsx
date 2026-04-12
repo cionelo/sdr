@@ -19,10 +19,11 @@ const meet = {
   division: 'D1', timing_company: null,
   a_live_url_1: null, a_live_url_1_scrapable: null,
   live_url_2: null, live_url_2_scrapable: null,
-  tfrrs_url: null, source_url: null, scraped_at: null,
-  created_at: '2026-01-01', updated_at: null,
+  tfrrs_url: null, tfrrs_id: null,
+  source_url: null, source_url_has_splits: null, source_url_known_provider: null,
+  scraped_at: null, created_at: '2026-01-01', updated_at: null,
 }
-const events = [{ id: 'e1', meet_id: 'abc', distance: '800m', gender: 'Women', name: null, date: null, location: null, season: null, source_url: null, results: [{ count: 24 }] }]
+const events = [{ id: 'e1', meet_id: 'abc', distance: '800m', gender: 'Women', name: null, date: null, location: null, season: null, source_url: null, provider: 'TFRRS', division: 'D1', results: [{ count: 24 }] }]
 
 function renderDetail() {
   return render(
@@ -42,8 +43,24 @@ describe('MeetDetail', () => {
     })
   })
 
-  it('renders meet name in the form', () => {
+  it('renders meet name in the header', () => {
     renderDetail()
+    expect(screen.getByText('Big 12 Indoor')).toBeInTheDocument()
+  })
+
+  it('shows pencil edit button', () => {
+    renderDetail()
+    expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
+  })
+
+  it('edit form is hidden by default', () => {
+    renderDetail()
+    expect(screen.queryByDisplayValue('Big 12 Indoor')).not.toBeInTheDocument()
+  })
+
+  it('opens edit form when pencil button clicked', () => {
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
     expect(screen.getByDisplayValue('Big 12 Indoor')).toBeInTheDocument()
   })
 
@@ -58,12 +75,13 @@ describe('MeetDetail', () => {
     expect(screen.getByText('Women')).toBeInTheDocument()
   })
 
-  it('shows Save button when isDirty', () => {
+  it('shows Save button when form is open and isDirty', () => {
     vi.mocked(useMeetHook.useMeet).mockReturnValue({
       meet, events, patch: { name: 'Changed' }, setPatch: vi.fn(),
       isDirty: true, loading: false, error: null, refetch: vi.fn(),
     })
     renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
   })
 
@@ -75,6 +93,7 @@ describe('MeetDetail', () => {
       isDirty: true, loading: false, error: null, refetch,
     })
     renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
     await waitFor(() => expect(service.updateMeet).toHaveBeenCalledWith(expect.anything(), 'abc', { name: 'Changed' }))
   })
@@ -113,6 +132,7 @@ describe('MeetDetail', () => {
       isDirty: true, loading: false, error: null, refetch: vi.fn(),
     })
     renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
     await waitFor(() => expect(screen.getByText(/save failed/i)).toBeInTheDocument())
   })
@@ -124,6 +144,18 @@ describe('MeetDetail', () => {
     })
     renderDetail()
     expect(screen.getByText(/no events linked/i)).toBeInTheDocument()
+  })
+
+  it('renders provider and division columns in events table', () => {
+    renderDetail()
+    expect(screen.getByText('TFRRS')).toBeInTheDocument()
+    expect(screen.getAllByText('D1').length).toBeGreaterThan(0)
+  })
+
+  it('event rows link to /meets/:id/events/:eventId', () => {
+    renderDetail()
+    const link = screen.getByRole('link', { name: /800m/i })
+    expect(link).toHaveAttribute('href', '/meets/abc/events/e1')
   })
 
   it('shows altitude venue info when venue is_altitude', () => {
