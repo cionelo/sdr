@@ -15,6 +15,7 @@ class RawRace:
     meet_id: str
     venue_name: str | None = None
     venue_elevation_ft: int | None = None
+    venue_id: str | None = None
     gender: str = ""
     data_quality: str = "verified_fat"
     timing_method: str = "FAT"

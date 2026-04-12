@@ -17,26 +17,108 @@ from sdr.py.db import get_client
 
 def run_pass2(dry_run: bool = False) -> None:
     """Pass 2 — Altitude & event normalization."""
+    from datetime import date as _date
+    from sdr.py.passes.pass2_normalize import normalize_race
+    from sdr.py.models.race import RawRace
+
     sb = get_client()
 
-    results = (
-        sb.table("results")
-        .select("id, athlete_id, event_id, time_s, race_date, meet_id")
-        .is_("normalized_time_s", "null")
-        .execute()
-    )
-    rows = results.data or []
-    print(f"[pass2] {len(rows)} results to normalize")
+    # Load altitude adjustment table: {venue_id: {event_distance: pct}}
+    adj_rows = sb.table("sdr_altitude_adjustments").select("venue_id, event_distance, adjustment_pct").execute().data or []
+    venue_adj: dict[str, dict[str, float]] = {}
+    for row in adj_rows:
+        venue_adj.setdefault(row["venue_id"], {})[row["event_distance"]] = float(row["adjustment_pct"])
+
+    # Load altitude venues: {city_lower: (venue_id, elevation_ft)}
+    venue_rows = sb.table("sdr_venues").select("id, city, elevation_ft").execute().data or []
+    city_to_venue: dict[str, tuple[str, int]] = {
+        v["city"].lower(): (v["id"], v["elevation_ft"])
+        for v in venue_rows
+        if v["city"]
+    }
+
+    # Load unnormalized results joined with event info (paginate 1000/page)
+    result_rows = []
+    page_size = 1000
+    offset = 0
+    while True:
+        page = (
+            sb.table("results")
+            .select("id, athlete_id, event_id, time_s, events(date, location, distance, gender, season)")
+            .is_("normalized_time_s", "null")
+            .range(offset, offset + page_size - 1)
+            .execute()
+            .data or []
+        )
+        result_rows.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+    print(f"[pass2] {len(result_rows)} results to normalize")
 
     if dry_run:
-        for r in rows[:10]:
-            print(f"  would normalize result {r['id']} ({r['time_s']}s)")
-        if len(rows) > 10:
-            print(f"  ... and {len(rows) - 10} more")
+        for r in result_rows[:10]:
+            ev = r.get("events") or {}
+            print(f"  would normalize {r['id']} | {ev.get('distance')} {r['time_s']}s @ {ev.get('location')}")
+        if len(result_rows) > 10:
+            print(f"  ... and {len(result_rows) - 10} more")
         return
 
-    from sdr.py.passes.pass2_normalize import normalize_race
-    raise NotImplementedError("Pass 2 pipeline wiring pending — pass function is stubbed")
+    updates = []
+    skipped = 0
+    for row in result_rows:
+        if row.get("time_s") is None:
+            skipped += 1
+            continue
+        ev = row.get("events") or {}
+        location = ev.get("location") or ""
+        distance = ev.get("distance") or ""
+        raw_date = ev.get("date")
+        race_date = _date.fromisoformat(raw_date) if raw_date else _date(1970, 1, 1)
+
+        # Resolve venue from location city
+        city = location.split(",")[0].strip().lower() if location else ""
+        venue_match = city_to_venue.get(city)
+        resolved_venue_id = venue_match[0] if venue_match else None
+        adjustments = venue_adj.get(resolved_venue_id, {}) if resolved_venue_id else {}
+
+        race = RawRace(
+            result_id=str(row["id"]),
+            athlete_id=str(row["athlete_id"]),
+            event=distance,
+            finish_time_sec=float(row["time_s"]),
+            splits_sec=(),
+            race_date=race_date,
+            meet_id=str(ev.get("event_id", "")),
+            venue_id=resolved_venue_id,
+            gender=ev.get("gender") or "",
+        )
+        normalized = normalize_race(race, adjustments)
+        updates.append({
+            "id": row["id"],
+            "venue_id": resolved_venue_id,
+            "normalized_time_s": round(normalized.normalized_time_sec, 4),
+            "canonical_event": normalized.canonical_event,
+            "altitude_adjusted": normalized.altitude_adjusted,
+            "altitude_adjustment_pct": round(normalized.altitude_adjustment_pct, 6) if normalized.altitude_adjustment_pct else None,
+            "event_converted": normalized.event_converted,
+            "event_conversion_factor": normalized.event_conversion_factor,
+            "normalization_version": SDR_VERSION,
+            "normalization_pass_at": "now()",
+        })
+
+    # Update each row — .update() is a partial PATCH (only modifies specified columns)
+    written = 0
+    for update in updates:
+        row_id = update.pop("id")
+        sb.table("results").update(update).eq("id", row_id).execute()
+        written += 1
+        if written % 100 == 0:
+            print(f"  wrote {written}/{len(updates)}")
+
+    if skipped:
+        print(f"[pass2] skipped {skipped} results with null time_s")
+    print(f"[pass2] done — {written} results normalized")
 
 
 def run_pass3(dry_run: bool = False) -> None:

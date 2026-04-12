@@ -49,9 +49,9 @@ _PACE_DISTANCE_TO_CANONICAL: dict[str, str] = {
     "800": "800m",
     "1500m": "1500m",
     "1500": "1500m",
-    "Mile": "mile",
-    "1 Mile": "mile",
-    "mile": "mile",
+    "Mile": "1500m",
+    "1 Mile": "1500m",
+    "mile": "1500m",
     "3000m": "3000m",
     "3000": "3000m",
     "3000m Steeplechase": "3000m_steeple",
@@ -63,6 +63,7 @@ _PACE_DISTANCE_TO_CANONICAL: dict[str, str] = {
     "10000m": "10000m",
     "10000": "10000m",
     "10K": "10000m",
+    "10,000m": "10000m",
 }
 
 # Events requiring time conversion (mile → 1500m equivalent)

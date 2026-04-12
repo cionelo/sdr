@@ -55,9 +55,10 @@ def test_standard_distance_passthrough():
 
 
 @pytest.mark.unit
-def test_mile_maps_to_mile():
-    assert pace_distance_to_canonical("Mile") == "mile"
-    assert pace_distance_to_canonical("1 Mile") == "mile"
+def test_mile_maps_to_1500m():
+    # Mile is converted to 1500m canonical for WA scoring (× 0.9259 factor)
+    assert pace_distance_to_canonical("Mile") == "1500m"
+    assert pace_distance_to_canonical("1 Mile") == "1500m"
 
 
 @pytest.mark.unit
@@ -71,6 +72,11 @@ def test_shorthand_distances():
     assert pace_distance_to_canonical("5K") == "5000m"
     assert pace_distance_to_canonical("10K") == "10000m"
 
+
+@pytest.mark.unit
+def test_10000m_comma_variant():
+    # Live data uses "10,000m" with comma
+    assert pace_distance_to_canonical("10,000m") == "10000m"
 
 @pytest.mark.unit
 def test_unknown_distance_returns_none():
