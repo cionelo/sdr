@@ -30,8 +30,8 @@ function SplitsPanel({ resultId }: { resultId: string }) {
           <tr key={sp.id} style={{ borderTop: '1px solid var(--border-thin)' }}>
             <td style={{ padding: '4px 12px', fontFamily: 'JetBrains Mono', fontSize: 12 }}>{sp.label ?? '—'}</td>
             <td style={{ padding: '4px 12px', fontFamily: 'JetBrains Mono', fontSize: 12 }}>{sp.distance_m ?? '—'}</td>
-            <td style={{ padding: '4px 12px', fontFamily: 'JetBrains Mono', fontSize: 12 }}>{formatTime(sp.time_s)}</td>
-            <td style={{ padding: '4px 12px', fontFamily: 'JetBrains Mono', fontSize: 12 }}>{formatTime(sp.split_s)}</td>
+            <td style={{ padding: '4px 12px', fontFamily: 'JetBrains Mono', fontSize: 12 }}>{formatTime(sp.elapsed_s)}</td>
+            <td style={{ padding: '4px 12px', fontFamily: 'JetBrains Mono', fontSize: 12 }}>{formatTime(sp.lap_s)}</td>
           </tr>
         ))}
       </tbody>

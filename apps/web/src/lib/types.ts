@@ -88,8 +88,8 @@ export interface Split {
   id: string
   result_id: string
   distance_m: number | null
-  time_s: number | null
-  split_s: number | null
+  elapsed_s: number | null
+  lap_s: number | null
   label: string | null
 }
 

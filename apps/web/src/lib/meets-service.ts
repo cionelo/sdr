@@ -102,12 +102,12 @@ export async function fetchResultSplits(
 ): Promise<Split[]> {
   const { data, error } = await client
     .from('splits')
-    .select('id, result_id, distance_m, time_s, split_s, label')
+    .select('id, result_id, distance_m, elapsed_s, lap_s, label')
     .eq('result_id', resultId)
     .order('distance_m', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data || []) as Split[]
+  return (data || []) as unknown as Split[]
 }
 
 export async function createMeet(client: SupabaseClient, payload: MeetPayload): Promise<Meet> {
