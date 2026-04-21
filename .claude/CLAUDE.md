@@ -81,10 +81,10 @@ All 8 migrations live on Supabase (shared instance). Applied via Management API.
 | `sdr_venues` | 001 | Live — 22 altitude venues seeded |
 | `sdr_altitude_adjustments` | 001 + 006 | Live — 154 model-interpolated rows + 1 verified |
 | `results.*` (9 cols added) | 003 | Live — venue_id, normalized_time_s, canonical_event, altitude_adjusted, altitude_adjustment_pct, event_converted, event_conversion_factor, normalization_version, normalization_pass_at |
-| `sdr_athlete_profiles` | 004 | Live — empty, populated by Pass 3 |
-| `sdr_race_sds` | 005 | Live — empty, populated by Pass 4 |
-| `sdr_composite` | 005 | Live — empty, populated by Pass 5 |
-| `meets` | 007 + 008 | Live — 419 meets, all 493 events linked via meet_id |
+| `sdr_athlete_profiles` | 004 | Live — 0 rows, populated by Pass 3 |
+| `sdr_race_sds` | 005 | Live — 0 rows, populated by Pass 4 |
+| `sdr_composite` | 005 | Live — 0 rows, populated by Pass 5 |
+| `meets` | 007 + 008 | Live — 513 meets, 1,041 events linked via meet_id |
 
 `meets` columns: id, name, date, location, venue_id, division, season, indoor, timing_company, a_live_url_1, a_live_url_1_scrapable, live_url_2, live_url_2_scrapable, tfrrs_url, tfrrs_id, source_url, source_url_has_splits, source_url_known_provider, scraped_at, created_at, updated_at
 `events` columns: id, source_id, name, date, location, gender, distance, season, division, provider, conference_id, meet_id, source_url, created_at
@@ -100,13 +100,13 @@ Live `events.distance` values: `800m`, `3000m`, `5000m`, `5K`, `8K`, `Mile`, `DM
 - `DMR` → `None` (relay — out of scope) ✓
 - No changes needed to field_mapping.py
 
-### B3 — Venue fuzzy matching (resolved 2026-04-11)
+### B3 — Venue fuzzy matching (resolved 2026-04-11, linked 2026-04-20)
 
 Live `events.location` format: `"City, ST"` (e.g. `"Boston, MA"`, `"Fayetteville, AR"`, `"Virginia Beach, VA"`)
 
-- All current locations are sea level — no altitude adjustments trigger on existing data
+- 3 altitude venue meets linked (Boulder/colorado_cu, Missoula/montana, Lubbock/texas_tech)
+- 313 results now have venue_id set, enabling altitude adjustments
 - Matching strategy for Pass 2: `location.split(", ")[0]` → case-insensitive match against `sdr_venues.city`
-- No curated alias table needed for v1
 
 ## Field Mapping
 
