@@ -1,26 +1,38 @@
-# SDR — Split Deviation Rating
+# SDR — Modular Track & Field Rating Tools
+
+> Pivoted 2026-04-20. Legacy 5-pass algorithm preserved on `legacy-sdr-v1` branch.
 
 ## What This Is
 
-SDR is a modular athlete rating algorithm for collegiate track & field.
-It consumes ingested race data from PACE's existing Supabase database
-and produces composite ratings per athlete per distance.
+SDR provides modular tools for collegiate track & field rating and analysis.
+Shares a Supabase database with `/pace/` (ingestion + splits visualization).
+
+**Current tools:**
+- **Pass 2 — Altitude + Event Normalization** (implemented, tested)
+- **WA Scoring Calculator** (implemented, tested)
+
+**Planned tools (post-pivot):**
+- **Splits Finder** — given a TFRRS link, find and display available split data
+- **Altitude-Adjusted Leaderboard** — WA scoring + altitude normalization for fair rankings
 
 ## Architecture
 
-5-pass pipeline:
-
 ```
-Pass 1 — Ingestion        (owned by /pace/, NOT this repo)
-Pass 2 — Altitude Normalization
-Pass 3 — Athlete Profiling (KsA, archetype, WA scoring, tier)
-Pass 4 — SDS Calculation   (split deviation scoring per race)
-Pass 5 — Aggregation       (decay-weighted composite SDR)
+TFRRS (source of truth for final times)
+    ↓
+Pass 2 — Altitude normalization + event conversion
+    ↓
+WA Scoring — Standardized points per performance
+    ↓
+Leaderboard — Ranked by altitude-adjusted WA points
 ```
 
-Each pass is independently re-runnable. Raw ingested data is never mutated.
+Splits Finder is a separate tool path:
+```
+TFRRS link → anet search API → Firebase splits check → display
+```
 
-## Scope Boundary (CRITICAL)
+## Scope Boundary
 
 - SDR only ADDS data to Supabase (new `sdr_*` tables, new columns on `results`)
 - SDR NEVER modifies or deletes data written by /pace/ ingestion
@@ -33,9 +45,6 @@ source sdr/py/.venv/bin/activate                          # activate venv
 python -m pytest sdr/py/tests/ -v                         # run tests
 python -m pytest sdr/py/tests/ --cov=sdr.py --cov-report=term-missing  # coverage
 python -m sdr.py.cli pass2                                # altitude normalization
-python -m sdr.py.cli pass3                                # athlete profiling
-python -m sdr.py.cli pass4                                # SDS calculation
-python -m sdr.py.cli pass5                                # SDR composite
 python -m sdr.py.cli pass2 --dry-run                      # preview without writing
 ```
 
@@ -45,75 +54,68 @@ All commands run from `/PACE/` root (not from `sdr/`).
 
 - Python 3.12+, pytest, TDD required (80%+ coverage)
 - Supabase (shared instance with /pace/) — project ref: zlvtnrtkqfhkjimbpkmp
-- Frontend: Vite + React + Tailwind (shares design system from /pace/apps/web/)
+- Frontend: Vite + React + Tailwind
 
 ## Env
 
 `.env` at `sdr/py/.env` — `SUPABASE_URL`, `SUPABASE_KEY` (or `SUPABASE_SERVICE_KEY`).
 Frontend env at `sdr/apps/web/.env.local` — `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
+## What's Implemented
+
+### Python (`py/`)
+
+| Module | Purpose | Status |
+|--------|---------|--------|
+| `passes/pass2_normalize.py` | Altitude adjustment + Mile→1500m conversion | Tested |
+| `utils/altitude.py` | Parametric altitude model (fitted from NCAA data) | Tested |
+| `utils/wa_calculator.py` | WA 2025 scoring tables (quadratic formula) | Tested |
+| `utils/field_mapping.py` | PACE↔SDR gender/event mapping | Tested |
+| `utils/time_convert.py` | Time parsing + NCAA rounding | Tested |
+| `constants/events.py` | Canonical event definitions | Reference |
+| `constants/wa_scoring.py` | WA coefficients per event/sex | Reference |
+| `models/race.py` | RawRace, NormalizedRace frozen dataclasses | Core |
+| `cli.py` | CLI runner (pass2 only) | Working |
+| `db.py` | Supabase client singleton | Working |
+
+### Frontend (`apps/web/`)
+
+Meets admin UI — list/filter/add/edit meets. Deployed to sdr-meets.vercel.app.
+Needs repurposing for leaderboard + splits finder.
+
 ## Key References
 
-- Specs: `sdr/algorithm design/` — all methodology docs
-- WA scoring coefficients: Jeff Chen's parsed JSON (github.com/jchen1/iaaf-scoring-tables)
-- KsA research: Blödorn & Döring (2025), Scientific Reports + BMC Research Notes
+- Algorithm design specs: `sdr/algorithm design/` (preserved for reference)
+- WA scoring coefficients: Jeff Chen's parsed JSON
+- Legacy 5-pass design: `git checkout legacy-sdr-v1`
 
-## Future Features (keep in mind during all design)
+## SDR Schema (updated 2026-04-20)
 
-- Build-your-own algorithm: coaches configure weights, presets, distance groups
-- Indoor track support (separate baselines, facility indexing)
-- Weather normalization
-- Race-type contextual adjustments (championship vs invitational)
+All migrations live on Supabase. Row counts as of 2026-04-20.
 
-## Existing /pace/ Schema (read-only for SDR)
+| Table | Migration | Rows | Notes |
+|-------|-----------|------|-------|
+| `sdr_venues` | 001 | 22 | Altitude venues seeded |
+| `sdr_altitude_adjustments` | 001 + 006 | 154 | Per-venue-event lookup |
+| `results.*` (9 cols) | 003 | 24,476 total | ~24K normalized, 313 with altitude venue links |
+| `sdr_athlete_profiles` | 004 | 0 | Legacy table (deferred) |
+| `sdr_race_sds` | 005 | 0 | Legacy table (deferred) |
+| `sdr_composite` | 005 | 0 | Legacy table (deferred) |
+| `meets` | 007 + 008 | 513 | All 1,041 events linked via meet_id |
 
-Tables: teams, events, athletes, results, splits
-Gender values: "Men" / "Women" (map to "male"/"female" internally)
-Time field: results.time_s (numeric seconds)
-Distance field: events.distance (text, e.g., "5000m")
-
-## SDR Schema (updated 2026-04-11)
-
-All 8 migrations live on Supabase (shared instance). Applied via Management API.
-
-| Table | Migration | Status |
-|-------|-----------|--------|
-| `sdr_venues` | 001 | Live — 22 altitude venues seeded |
-| `sdr_altitude_adjustments` | 001 + 006 | Live — 154 model-interpolated rows + 1 verified |
-| `results.*` (9 cols added) | 003 | Live — venue_id, normalized_time_s, canonical_event, altitude_adjusted, altitude_adjustment_pct, event_converted, event_conversion_factor, normalization_version, normalization_pass_at |
-| `sdr_athlete_profiles` | 004 | Live — 0 rows, populated by Pass 3 |
-| `sdr_race_sds` | 005 | Live — 0 rows, populated by Pass 4 |
-| `sdr_composite` | 005 | Live — 0 rows, populated by Pass 5 |
-| `meets` | 007 + 008 | Live — 513 meets, 1,041 events linked via meet_id |
-
-`meets` columns: id, name, date, location, venue_id, division, season, indoor, timing_company, a_live_url_1, a_live_url_1_scrapable, live_url_2, live_url_2_scrapable, tfrrs_url, tfrrs_id, source_url, source_url_has_splits, source_url_known_provider, scraped_at, created_at, updated_at
-`events` columns: id, source_id, name, date, location, gender, distance, season, division, provider, conference_id, meet_id, source_url, created_at
-
-**B5 resolved 2026-04-11.** All other blockers resolved below.
-
-### B4 — Distance strings (resolved 2026-04-11)
-
-Live `events.distance` values: `800m`, `3000m`, `5000m`, `5K`, `8K`, `Mile`, `DMR`
-
-- `800m`, `3000m`, `5000m`, `5K`, `Mile` → all mapped in `field_mapping.py` ✓
-- `8K` → `None` (XC, no 8000m track equivalent — out of v1 scope) ✓
-- `DMR` → `None` (relay — out of scope) ✓
-- No changes needed to field_mapping.py
-
-### B3 — Venue fuzzy matching (resolved 2026-04-11, linked 2026-04-20)
-
-Live `events.location` format: `"City, ST"` (e.g. `"Boston, MA"`, `"Fayetteville, AR"`, `"Virginia Beach, VA"`)
-
-- 3 altitude venue meets linked (Boulder/colorado_cu, Missoula/montana, Lubbock/texas_tech)
-- 313 results now have venue_id set, enabling altitude adjustments
-- Matching strategy for Pass 2: `location.split(", ")[0]` → case-insensitive match against `sdr_venues.city`
+`results` SDR columns: `venue_id`, `normalized_time_s`, `canonical_event`, `altitude_adjusted`, `altitude_adjustment_pct`, `event_converted`, `event_conversion_factor`, `normalization_version`, `normalization_pass_at`
 
 ## Field Mapping
 
 PACE → SDR gender: "Men"→"male", "Women"→"female" (`sdr/py/utils/field_mapping.py`)
 Distance variants (Mile, 5K, 3000m SC) → canonical events via `pace_distance_to_canonical()`
 
-## Recent Checkpoints
+## Pivot Context
 
-- `~/.claude/checkpoints/chkpt-sdr-2026-04-11-1149.md` — repo bootstrap, env setup, GitHub repo created (cionelo/sdr)
-- `~/.claude/checkpoints/checkpoint-2026-04-08-1447.md` — setup/overhead complete (venv, db.py, CLI, field mapping, pytest config, frontend scaffold)
+Full state doc: `/PACE/pace-sdr-state-and-pivot-2026-04-20.md`
+
+Key decisions:
+- WA points + altitude adjustment = the rating. No SDS pacing score in v1.
+- TFRRS is source of truth for final times. Don't replicate their DB.
+- Splits analysis is a separate tool, not baked into rankings.
+- Legacy algorithm specs preserved on `legacy-sdr-v1` branch for future reference.
